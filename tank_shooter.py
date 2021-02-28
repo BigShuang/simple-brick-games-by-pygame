@@ -1,6 +1,7 @@
 import pygame
 import sys
 import time
+import random
 
 C, R = 11, 20
 CELL_SIZE = 40
@@ -11,19 +12,19 @@ MOVE_SPACE = 10
 WIN_WIDTH = CELL_SIZE * C  # 窗口宽度
 WIN_HEIGHT = CELL_SIZE * R  # 窗口高度
 
-COLOR_1 = (255, 255, 255)
+COLORS = {
+    "bg": (200, 200, 200),
+    "player": (65, 105, 225),  # RoyalBlue
+    "enemy": (50, 50, 50),
+    "line": (225, 225, 225)
+}
 
-TANK_GRID = [
-    [0, 1, 0],
-    [1, 1, 1],
-    [1, 1, 1],
-]
 
 TANKS = {
     "player": [
         [0, 1, 0],
         [1, 1, 1],
-        [1, 1, 1],
+        [1, 0, 1],
     ],
     "enemy": [
         [1, 0, 1],
@@ -40,7 +41,7 @@ win=pygame.display.set_mode((WIN_WIDTH,WIN_HEIGHT))
 
 
 class Block(pygame.sprite.Sprite):
-    def __init__(self, c, r):
+    def __init__(self, c, r, color="bg"):
         super().__init__()
 
         self.cr = [c, r]
@@ -48,7 +49,7 @@ class Block(pygame.sprite.Sprite):
         self.y = r * CELL_SIZE
 
         self.image  = pygame.Surface((CELL_SIZE, CELL_SIZE))
-        self.image.fill(COLOR_1)
+        self.image.fill(COLORS[color])
         # points = []
         # pygame.draw.polygon(self.image, COLOR_1, points)
 
@@ -110,14 +111,12 @@ class Tank(pygame.sprite.Group):
         super().__init__()
 
         self.kind = tank_kind
-        # self.cr = [0, 0]
 
         for ri, row in enumerate(TANKS[self.kind]):
             for ci, cell in enumerate(row):
                 if cell == 1:
-                    block = Block(c+ci, r+ri)
+                    block = Block(c+ci, r+ri, tank_kind)
                     self.add(block)
-
 
     def move(self, direction=""):
         if all(block.check_move(direction) for block in self.sprites()):
@@ -131,17 +130,45 @@ class Tank(pygame.sprite.Group):
         return all(block.is_out() for block in self.sprites())
 
 
+class EnemyManager():
+    def __init__(self):
+        self.enemies = []
+
+        self.move_count = 0
+
+    def gen_new_enemies(self):
+        if self.move_count % (2 * len(TANKS["enemy"]) + 1) == 1:
+            ec = random.randint(1, C - len(TANKS["enemy"][0]))
+            enemy = Tank(ec, 0, "enemy")
+
+            self.enemies.append(enemy)
+
+    def move(self):
+        to_delete = []
+        for i, enemy in enumerate(self.enemies):
+            enemy.free_move("DOWN")
+            if enemy.is_out():
+                to_delete.append(i)
+
+        for di in to_delete[::-1]:  # 倒着按序号来删除
+            self.enemies.pop(di)
+
+        self.move_count += 1
+
+        self.gen_new_enemies()
+
+    def draw(self, master):
+        for enemy in self.enemies:
+            enemy.draw(master)
+
+
 bottom_center_c = (C - len(TANKS["player"][0])) // 2
 bottom_center_r = R - len(TANKS["player"])
 player_tank = Tank(bottom_center_c, bottom_center_r, "player")
 
-enemies = []
-
-enemy1 = Tank(0, 0, "enemy")
-
-enemies.append(enemy1)
 time_count = 0
-last_time = int(time.time())
+
+emg = EnemyManager()
 
 while True:
     # 获取所有事件
@@ -162,24 +189,19 @@ while True:
                 player_tank.move("DOWN")
 
     if (time_count + 1) % MOVE_SPACE == 0:
-        to_delete = []
-        for i, enemy in enumerate(enemies):
-            enemy.free_move("DOWN")
-            if enemy.is_out():
-                to_delete.append(i)
-
-        for di in to_delete[::-1]:  # 倒着按序号来删除
-            enemies.pop(di)
-
+        emg.move()
 
     clock.tick(FPS) # 控制循环刷新频率,每秒刷新FPS对应的值的次数
     time_count += 1
 
     # Fill the screen with black
-    win.fill((0, 0, 0))
+    win.fill(COLORS["bg"])
+    for ci in range(C):
+        cx = CELL_SIZE * ci
+        pygame.draw.line(win, COLORS["line"], (cx, 0), (cx, R * CELL_SIZE))
 
     # Draw the player on the screen
     player_tank.draw(win)
-    enemy1.draw(win)
+    emg.draw(win)
 
     pygame.display.update()
