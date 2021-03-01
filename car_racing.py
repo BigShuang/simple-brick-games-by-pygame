@@ -3,11 +3,11 @@ import sys
 import time
 import random
 
-C, R = 11, 20
+C, R = 11, 20  # 11列， 20行
 CELL_SIZE = 40
 
 FPS=60 # 游戏帧率
-MOVE_SPACE = 10
+MOVE_SPACE = 10  # 敌人移动速度（单位，帧）
 
 WIN_WIDTH = CELL_SIZE * C  # 窗口宽度
 WIN_HEIGHT = CELL_SIZE * R  # 窗口高度
@@ -20,7 +20,6 @@ COLORS = {
     "score": (0,128,0),  # SpringGreen
     "over": (255,0,0)
 }
-
 
 CARS = {
     "player": [
@@ -35,6 +34,12 @@ CARS = {
     ]
 }
 
+DIRECTIONS = {
+    "UP": (0, -1),
+    "DOWN": (0, 1),
+    "LEFT": (-1, 0),
+    "RIGHT": (1, 0),
+}
 
 
 pygame.init() # pygame初始化，必须有，且必须在开头
@@ -69,7 +74,8 @@ class Block(pygame.sprite.Sprite):
         self.cr[1] = r
         self.x = c * CELL_SIZE
         self.y = r * CELL_SIZE
-        self.rect.move_ip(self.x, self.y)
+        self.rect.left = self.x
+        self.rect.top = self.y
 
     def is_out(self):
         if 0 <= self.cr[0] < C and 0 <= self.cr[1] < R:
@@ -77,40 +83,18 @@ class Block(pygame.sprite.Sprite):
         return False
 
     def move(self, direction=""):
-        if direction == "LEFT":
-            self.cr[0] -= 1
-            self.x -= CELL_SIZE
-            self.rect.left = self.x
-        if direction == "RIGHT":
-            self.cr[0] += 1
-            self.x += CELL_SIZE
-            self.rect.left = self.x
-        if direction == "UP" :
-            self.cr[1] -= 1
-            self.y -= CELL_SIZE
-            self.rect.top = self.y
-        if direction == "DOWN":
-            self.cr[1] += 1
-            self.y += CELL_SIZE
-            self.rect.top = self.y
+        move_c, move_r = DIRECTIONS[direction]
+        next_c, next_r = self.cr[0] + move_c, self.cr[1] + move_r
+        self.move_cr(next_c, next_r)
 
     def check_move(self, direction=""):
-        if direction == "LEFT":
-            if self.cr[0] <= 0:
-                return False
-        if direction == "RIGHT":
-            if self.cr[0] >= C - 1:
-                return False
+        move_c, move_r = DIRECTIONS[direction]
+        next_c, next_r = self.cr[0] + move_c, self.cr[1] + move_r
 
-        if direction == "UP":
-            if self.cr[1] <= 0:
-                return False
+        if 0 <= next_c < C and 0 <= next_r < R:
+            return True
 
-        if direction == "DOWN":
-            if self.cr[1] >= R - 1:
-                return False
-
-        return True
+        return False
 
     def check_collide(self, car):
         if tuple(self.cr) in car.get_locations():
@@ -187,18 +171,16 @@ class EnemyManager():
 
 bottom_center_c = (C - len(CARS["player"][0])) // 2
 bottom_center_r = R - len(CARS["player"])
+
 player_car = Car(bottom_center_c, bottom_center_r, "player")
-
 time_count = 0
-
 emg = EnemyManager()
-
-running = False
-
 
 start_info = FONTS[2].render("Press any key to start game", True, COLORS["score"])
 text_rect = start_info.get_rect(center=(WIN_WIDTH / 2, WIN_HEIGHT / 2))
 win.blit(start_info, text_rect)
+
+running = True
 
 while True:
     # 获取所有事件
