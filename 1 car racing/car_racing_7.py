@@ -34,19 +34,12 @@ CARS = {
     ]
 }
 
-DIRECTIONS = {
-    "UP": (0, -1),
-    "DOWN": (0, 1),
-    "LEFT": (-1, 0),
-    "RIGHT": (1, 0),
-}
-
 
 pygame.init() # pygame初始化，必须有，且必须在开头
 # 创建主窗体
 clock=pygame.time.Clock() # 用于控制循环刷新频率的对象
 win=pygame.display.set_mode((WIN_WIDTH,WIN_HEIGHT))
-
+pygame.display.set_caption('Car Racing by Big Shuang')
 
 FONTS = [
     pygame.font.Font(pygame.font.get_default_font(), font_size) for font_size in [48, 36, 24]
@@ -180,7 +173,7 @@ start_info = FONTS[2].render("Press any key to start game", True, COLORS["score"
 text_rect = start_info.get_rect(center=(WIN_WIDTH / 2, WIN_HEIGHT / 2))
 win.blit(start_info, text_rect)
 
-running = True
+running = False
 move_cr = [0, 0]
 
 while True:

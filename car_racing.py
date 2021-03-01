@@ -1,10 +1,9 @@
 import pygame
 import sys
-import time
 import random
 
 C, R = 11, 20  # 11列， 20行
-CELL_SIZE = 40
+CELL_SIZE = 40  # 格子尺寸
 
 FPS=60 # 游戏帧率
 MOVE_SPACE = 10  # 敌人移动速度（单位，帧）
@@ -21,7 +20,7 @@ COLORS = {
     "over": (255,0,0)
 }
 
-CARS = {
+CARS = {  # 车的形状，即格子位置
     "player": [
         [0, 1, 0],
         [1, 1, 1],
@@ -33,6 +32,7 @@ CARS = {
         [0, 1, 0],
     ]
 }
+
 
 DIRECTIONS = {
     "UP": (0, -1),
@@ -47,10 +47,11 @@ pygame.init() # pygame初始化，必须有，且必须在开头
 clock=pygame.time.Clock() # 用于控制循环刷新频率的对象
 win=pygame.display.set_mode((WIN_WIDTH,WIN_HEIGHT))
 
-
+# 大中小三种字体，48,36,24
 FONTS = [
     pygame.font.Font(pygame.font.get_default_font(), font_size) for font_size in [48, 36, 24]
 ]
+
 
 class Block(pygame.sprite.Sprite):
     def __init__(self, c, r, color="bg"):
@@ -180,7 +181,7 @@ start_info = FONTS[2].render("Press any key to start game", True, COLORS["score"
 text_rect = start_info.get_rect(center=(WIN_WIDTH / 2, WIN_HEIGHT / 2))
 win.blit(start_info, text_rect)
 
-running = True
+running = False
 
 while True:
     # 获取所有事件
