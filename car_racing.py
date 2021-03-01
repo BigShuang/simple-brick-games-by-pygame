@@ -16,7 +16,9 @@ COLORS = {
     "bg": (200, 200, 200),
     "player": (65, 105, 225),  # RoyalBlue
     "enemy": (50, 50, 50),
-    "line": (225, 225, 225)
+    "line": (225, 225, 225),
+    "score": (0,128,0),  # SpringGreen
+    "over": (255,0,0)
 }
 
 
@@ -34,11 +36,16 @@ CARS = {
 }
 
 
+
 pygame.init() # pygame初始化，必须有，且必须在开头
 # 创建主窗体
 clock=pygame.time.Clock() # 用于控制循环刷新频率的对象
 win=pygame.display.set_mode((WIN_WIDTH,WIN_HEIGHT))
 
+
+FONTS = [
+    pygame.font.Font(pygame.font.get_default_font(), font_size) for font_size in [48, 36, 24]
+]
 
 class Block(pygame.sprite.Sprite):
     def __init__(self, c, r, color="bg"):
@@ -186,8 +193,12 @@ time_count = 0
 
 emg = EnemyManager()
 
-running = True
+running = False
 
+
+start_info = FONTS[2].render("Press any key to start game", True, COLORS["score"])
+text_rect = start_info.get_rect(center=(WIN_WIDTH / 2, WIN_HEIGHT / 2))
+win.blit(start_info, text_rect)
 
 while True:
     # 获取所有事件
@@ -207,19 +218,20 @@ while True:
                     player_car.move("UP")
                 if event.key == pygame.K_DOWN or event.key == ord('s'):
                     player_car.move("DOWN")
+            else:
+                # reset game
+                player_car = Car(bottom_center_c, bottom_center_r, "player")
+                time_count = 0
+                emg = EnemyManager()
+                running =True
 
     if running:
+        # Fill the screen with black
+        win.fill(COLORS["bg"])
+
         if (time_count + 1) % MOVE_SPACE == 0:
             emg.move()
 
-        if player_car.check_collide(*emg.enemies):
-            print("Game Over")
-            running = False
-
-        time_count += 1
-
-        # Fill the screen with black
-        win.fill(COLORS["bg"])
         for ci in range(C):
             cx = CELL_SIZE * ci
             pygame.draw.line(win, COLORS["line"], (cx, 0), (cx, R * CELL_SIZE))
@@ -227,6 +239,22 @@ while True:
         # Draw the player on the screen
         player_car.draw(win)
         emg.draw(win)
+        text_info = FONTS[2].render("Scores: %d" % (time_count / FPS), True, COLORS["score"])
+        win.blit(text_info, dest=(0, 0))
+
+
+        if player_car.check_collide(*emg.enemies):
+            print("Game Over")
+            texts = ["Game Over", "Scores: %d" % (time_count / FPS), "Press Any Key to Restart game"]
+            for ti, text in enumerate(texts):
+                over_info = FONTS[ti].render(text, True, COLORS["over"])
+                text_rect = over_info.get_rect(center=(WIN_WIDTH / 2, WIN_HEIGHT / 2 + 48 * ti))
+                win.blit(over_info, text_rect)
+
+            running = False
+
+        time_count += 1
 
     clock.tick(FPS) # 控制循环刷新频率,每秒刷新FPS对应的值的次数
+
     pygame.display.update()
