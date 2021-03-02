@@ -44,3 +44,4 @@
 #### 未来值得学习
 
 - [https://opensource.com/article/18/7/put-platforms-python-game](https://opensource.com/article/18/7/put-platforms-python-game)
+- [https://www.101computing.net/breakout-tutorial-using-pygame-getting-started/](https://www.101computing.net/breakout-tutorial-using-pygame-getting-started/)
