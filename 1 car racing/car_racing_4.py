@@ -15,6 +15,18 @@ DIRECTIONS = {
     "RIGHT": (1, 0),
 }
 
+CARS = {  # 车的形状，即格子位置
+    "player": [
+        [0, 1, 0],
+        [1, 1, 1],
+        [1, 0, 1],
+    ],
+    "enemy": [
+        [1, 0, 1],
+        [1, 1, 1],
+        [0, 1, 0],
+    ]
+}
 
 pygame.init() # pygame初始化，必须有，且必须在开头
 # 创建主窗体
@@ -58,9 +70,28 @@ class Block(pygame.sprite.Sprite):
         return False
 
 
+class Car(pygame.sprite.Group):
+    def __init__(self, c, r, car_kind, car_color):
+        super().__init__()
+
+        self.kind = car_kind
+
+        for ri, row in enumerate(CARS[self.kind]):
+            for ci, cell in enumerate(row):
+                if cell == 1:
+                    block = Block(c+ci, r+ri, car_color)
+                    self.add(block)
+
+    def move(self, direction=""):
+        if all(block.check_move(direction) for block in self.sprites()):
+            for block in self.sprites():
+                block.move(direction)
+
+
 bg_color = (200, 200, 200)
 enemy_color = (50, 50, 50)
-block = Block(1, 0, enemy_color)
+player_color = (65, 105, 225)  # RoyalBlue
+car = Car(5, 5, "player", player_color)
 
 while True:
     # 获取所有事件
@@ -72,20 +103,17 @@ while True:
 
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT or event.key == ord('a'):
-                if block.check_move("LEFT"):
-                    block.move("LEFT")
+                car.move("LEFT")
             if event.key == pygame.K_RIGHT or event.key == ord('d'):
-                if block.check_move("RIGHT"):
-                    block.move("RIGHT")
+                car.move("RIGHT")
             if event.key == pygame.K_UP or event.key == ord('w'):
-                if block.check_move("UP"):
-                    block.move("UP")
+                car.move("UP")
             if event.key == pygame.K_DOWN or event.key == ord('s'):
-                if block.check_move("DOWN"):
-                    block.move("DOWN")
+                car.move("DOWN")
 
     win.fill(bg_color)
-    win.blit(block.image, block.rect)
+
+    car.draw(win)
 
     clock.tick(FPS) # 控制循环刷新频率,每秒刷新FPS对应的值的次数
     pygame.display.update()
