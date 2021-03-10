@@ -9,9 +9,8 @@ python pygame 实现方块游戏机里面的小游戏
 
 TODO
 
-- ping png
-- tank 
-- 
+- tank
+-
 
 
 
