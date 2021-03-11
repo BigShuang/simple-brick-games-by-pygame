@@ -20,6 +20,8 @@ pygame.init() # pygame初始化，必须有，且必须在开头
 # 创建主窗体
 clock = pygame.time.Clock() # 用于控制循环刷新频率的对象
 win = pygame.display.set_mode((WIN_WIDTH,WIN_HEIGHT))
+pygame.display.set_caption('Car Racing by Big Shuang')
+
 
 class Block(pygame.sprite.Sprite):
     def __init__(self, c, r, color):
