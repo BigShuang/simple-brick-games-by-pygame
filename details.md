@@ -2,10 +2,10 @@
 方块游戏机中的方块小游戏
 
 本项目预计实现
-- 坦克大战
 - 赛车
 - Ping Pong
-- 青蛙过河
+- 坦克大战
+-
 
 
 
@@ -22,7 +22,7 @@
 - A Breakout or Pong inspired game.
 - A vertical shooter based on Galaxian.
 - A classic "snake" game, often with gimmicks added.
-- A matching game consisting of three different 
+- A matching game consisting of three different
   shaped blocks appear at the top and bottom of the screen.
 - A whack-a-mole style game
 - Another racing game,
@@ -40,6 +40,8 @@
 
 - [https://retroconsoles.fandom.com/wiki/Brick_Game](https://retroconsoles.fandom.com/wiki/Brick_Game)
 - [https://realpython.com/pygame-a-primer/](https://realpython.com/pygame-a-primer/)
+- [See game name list](https://play.google.com/store/apps/details?id=com.perseusgames.brickgame&hl=en&gl=US)
+
 
 #### 未来值得学习
 

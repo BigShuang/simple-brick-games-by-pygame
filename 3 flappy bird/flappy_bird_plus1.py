@@ -1,9 +1,10 @@
+# Move smoothly
 import pygame
 import sys
 import random
 
 
-C, R = 16, 24  # 16列， 24行
+C, R = 15, 24  # 16列， 24行
 CELL_SIZE = 30  # 格子尺寸
 SPACE_LEN = 6
 PADDING = 5
@@ -14,8 +15,8 @@ bird_color = (65, 105, 225)
 score_color = (0,128,0)  # SpringGreen
 over_color = (255, 0, 0)
 
-FPS=6  # 游戏帧率
-MOVE_SPACE = 3
+FPS=60  # 游戏帧率
+MOVE_SPACE = 2
 WIN_WIDTH = CELL_SIZE * C  # 窗口宽度
 WIN_HEIGHT = CELL_SIZE * R  # 窗口高度
 
@@ -31,13 +32,12 @@ FONTS = [
 ]
 
 
-class Block(pygame.sprite.Sprite):
-    def __init__(self, c, r, color):
+class Bird(pygame.sprite.Sprite):
+    def __init__(self, x, y, color):
         super().__init__()
 
-        self.cr = [c, r]
-        self.x = c * CELL_SIZE
-        self.y = r * CELL_SIZE
+        self.x = x
+        self.y = y
 
         self.image  = pygame.Surface((CELL_SIZE, CELL_SIZE))
         self.image.fill(color)
@@ -45,35 +45,71 @@ class Block(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.move_ip(self.x, self.y)
 
-    def move_cr(self, c=0, r=0):
-        self.cr[0] += c
-        self.cr[1] += r
-        self.x = self.cr[0] * CELL_SIZE
-        self.y = self.cr[1] * CELL_SIZE
-        self.rect.left = self.x
+    def fly(self):  # move up
+        self.y -= MOVE_SPACE * 2
         self.rect.top = self.y
 
-class Wall(pygame.sprite.Group):
-    def __init__(self, space, space_r):
-        super().__init__()
-        right_c = C - 1
+    def fall(self):  # move down
+        self.y += MOVE_SPACE * 2
+        self.rect.top = self.y
 
-        for ri in range(R):
-            if not (0 <= ri - space_r < space):
-                block = Block(right_c, ri, wall_color)
-                self.add(block)
+    def check_collide(self, wall_manager):
+        if self.y < 0 or self.y > WIN_HEIGHT - CELL_SIZE:
+            return True
+
+        for wall in wall_manager.walls:
+            if wall.check_collide(self):
+                return True
+
+        return False
+
+
+class Block(pygame.sprite.Sprite):
+    def __init__(self, height, is_top):
+        super().__init__()
+        self.x = WIN_WIDTH
+        if is_top:
+            self.y = 0
+        else:
+            self.y = WIN_HEIGHT - height
+
+        self.image = pygame.Surface((CELL_SIZE, height))
+        self.image.fill(wall_color)
+
+        self.rect = self.image.get_rect()
+        self.rect.move_ip(self.x, self.y)
+
+    def move_left(self):
+        self.x -= MOVE_SPACE
+        self.rect.left = self.x
+
+
+class Wall(pygame.sprite.Group):
+    def __init__(self, space_num, top_rnum):
+        super().__init__()
+
+        top_height = top_rnum * CELL_SIZE
+        bottom_height = WIN_HEIGHT - (top_rnum+space_num) * CELL_SIZE
+
+        top_block = Block(top_height, True)
+        bottom_block = Block(bottom_height, False)
+
+        self.add(top_block)
+        self.add(bottom_block)
+
+        self.passed = False  # bird fly over it
 
     def move_left(self):
         for block in self.sprites():
-            block.move_cr(c=-1)
+            block.move_left()
 
-    def get_c(self):
+    def get_rx(self):
         top_block = self.sprites()[0]
-        return top_block.cr[0]
+        return top_block.x + CELL_SIZE
 
-    def check_collide(self, other_block):
+    def check_collide(self, bird):
         for block in self.sprites():
-            if tuple(block.cr) == tuple(other_block.cr):
+            if pygame.sprite.collide_rect(block, bird):
                 return True
 
         return False
@@ -100,25 +136,27 @@ class WallManager():
         self.last_r = next_r
 
         self.walls.append(wall)
-        self.last_c = C - 1
+        self.last_c = WIN_WIDTH
         print("wall counts:", len(self.walls))
 
-    def move(self, bird_c):
+    def move(self, bird_x):
         score = 0
         # 超出边界后，自动清理掉
         to_delete = []
         for i, wall in enumerate(self.walls):
             wall.move_left()
-            if wall.get_c() == bird_c + 1:
+            if not wall.passed and wall.get_rx() < bird_x:
+                wall.passed = True
                 score = 1
-            if wall.get_c() < 0:
+            if wall.get_rx() < 0:
                 to_delete.append(i)
 
         for di in to_delete[::-1]:  # 倒着按序号来删除
             self.walls.pop(di)
 
-        self.last_c -= 1
-        if C - self.last_c - 1 > self.padding:
+        if self.walls:
+            self.last_c = self.walls[-1].get_rx()
+        if C * CELL_SIZE - self.last_c > self.padding * CELL_SIZE:
             self.generate_wall()
         return score
 
@@ -127,23 +165,9 @@ class WallManager():
             wall.draw(win)
 
 
-class Bird(Block):
-    def __init__(self, c, r, color):
-        super().__init__(c, r, color)
-
-    def check_collide(self, wallmanager):
-        if self.cr[1] < 0 or self.cr[1] >= R:
-            return True
-
-        for wall in wallmanager.walls:
-            if wall.check_collide(self):
-                return True
-
-        return False
-
 wm = WallManager(PADDING)
-bird_c = C // 2
-bird_r = R // 2
+bird_c = WIN_WIDTH // 2
+bird_r = WIN_HEIGHT // 2
 bird = Bird(bird_c, bird_r, bird_color)
 
 frame_count = 0
@@ -153,6 +177,7 @@ text_rect = start_info.get_rect(center=(WIN_WIDTH / 2, WIN_HEIGHT / 2))
 win.blit(start_info, text_rect)
 
 running =False
+is_fly = False
 score = 0
 while True:
     frame_count += 1
@@ -163,27 +188,37 @@ while True:
             pygame.quit()  # 关闭窗口
             sys.exit()  # 停止程序
 
-        if event.type == pygame.KEYDOWN:
-            if running:
+
+        if running:
+            if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_UP or event.key == ord('w'):
-                    bird.move_cr(r=-2)
-            else:
+                    is_fly = True
+            if event.type == pygame.KEYUP:
+                if event.key == pygame.K_UP or event.key == ord('w'):
+                    is_fly = False
+        else:
+            if event.type == pygame.KEYDOWN:
                 if event.key == ord('s'):
                     bird = Bird(bird_c, bird_r, bird_color)
+                    is_fly = False
                     wm = WallManager(PADDING)
                     frame_count = 0
                     score = 0
                     running = True
 
+
     if running:
         win.fill(bg_color)
 
         if frame_count % MOVE_SPACE == 0:
-            score += wm.move(bird.cr[0])
+            score += wm.move(bird.x)
 
         wm.draw(win)
 
-        bird.move_cr(r=1)
+        if is_fly:
+            bird.fly()
+        else:
+            bird.fall()
         win.blit(bird.image, bird.rect)
 
         text_info = FONTS[2].render("Scores: %d" % score, True, score_color)
