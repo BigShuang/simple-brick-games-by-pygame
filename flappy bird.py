@@ -152,7 +152,7 @@ start_info = FONTS[2].render("Press S to start game", True, score_color)
 text_rect = start_info.get_rect(center=(WIN_WIDTH / 2, WIN_HEIGHT / 2))
 win.blit(start_info, text_rect)
 
-running =False
+running = False
 score = 0
 while True:
     frame_count += 1

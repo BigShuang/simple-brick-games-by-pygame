@@ -3,15 +3,14 @@ import sys
 import random
 
 
-C, R = 24, 18  # 11列， 20行
-CELL_SIZE = 40  # 格子尺寸
+C, R = 32, 24  # 11列， 20行
+CELL_SIZE = 30  # 格子尺寸
 
 
 FPS=60  # 游戏帧率
 WIN_WIDTH = CELL_SIZE * C  # 窗口宽度
 WIN_HEIGHT = CELL_SIZE * R  # 窗口高度
-BULLET_SPEED = 5
-GENERATE_SPACE = 4  # 敌人生成时间间隔
+BULLET_SPEED = 6
 
 
 DIRECTIONS = {
@@ -48,21 +47,11 @@ TANK_SIZE = 3
 
 COLORS = {
     "bg": (200, 200, 200),
-    "enemy": (50, 50, 50),
-    "player": (65, 105, 225),
-    "player-bullet": (148, 0, 211),
-    "enemy-bullet": (165,42,42),
-    "score":  (0,128,0),
-    "over": (139,0,0)
+    "enemy": (100, 100, 100),
+    "player": (150,150,150),
+    "player-bullet": (165,42,42),
+    "enemy-bullet": (50, 50, 50)
 }
-#
-# COLORS = {
-#     "bg": (200, 200, 200),
-#     "enemy": (100, 100, 100),
-#     "player": (150,150,150),
-#     "player-bullet": (165,42,42),
-#     "enemy-bullet": (50, 50, 50)
-# }
 
 
 pygame.init() # pygame初始化，必须有，且必须在开头
@@ -70,13 +59,6 @@ pygame.init() # pygame初始化，必须有，且必须在开头
 clock = pygame.time.Clock() # 用于控制循环刷新频率的对象
 win = pygame.display.set_mode((WIN_WIDTH,WIN_HEIGHT))
 pygame.display.set_caption('Tank Racing by Big Shuang')
-
-
-# 大中小三种字体，48,36,24
-FONTS = [
-    pygame.font.Font(pygame.font.get_default_font(), font_size) for font_size in [48, 36, 24]
-]
-
 
 
 class Block(pygame.sprite.Sprite):
@@ -171,18 +153,14 @@ class Tank(pygame.sprite.Group):
         self.blocks = _blocks
         self.d = direction
 
-    def move(self, direction="", *others):
+    def move(self, direction=""):
         if self.d != direction:
             self.rotate(direction)
             return False
         elif self.check_forward():
             dcr = DIRECTIONS[direction]
-            mc, mr = self.cr[0] + dcr[0], self.cr[1] + dcr[1]
-            for other in others:
-                if abs(other.cr[0] - mc) < 3 and abs(other.cr[1] - mr) < 3:
-                    return False
-
-            self.cr = [mc, mr]
+            self.cr[0] += dcr[0]
+            self.cr[1] += dcr[1]
 
             for block in self.sprites():
                 block.move(direction)
@@ -212,8 +190,6 @@ class Tank(pygame.sprite.Group):
         bullet = Bullet(self.d, shoot_c, shoot_r, self.color+"-bullet")
         return bullet
 
-    def __str__(self):
-        return "c: %s, r: %s, d: %s" % (self.cr[0], self.cr[1], self.d)
 
 class BulletManager(pygame.sprite.Group):
     def move(self):
@@ -244,16 +220,18 @@ class EnemyManager:
 
         for key in keys:
             kc, kr = key
-
+            new_enemy = Tank(kc, kr, "enemy")
+            if pygame.sprite.groupcollide(new_enemy, player, False, False):
+                continue
             to_continue = False
-            for other in self.enemies + [player]:
-                if abs(other.cr[0] - kc) < 3 and abs(other.cr[1] - kr) < 3:
+            for enemy in self.enemies:
+                if pygame.sprite.groupcollide(new_enemy, enemy, False, False):
                     to_continue = True
-
+                    break
             if to_continue:
                 continue
 
-            new_enemy = Tank(kc, kr, "enemy")
+            # print("ENEMY DIRECTION: ", Four_Corners[key])
             new_enemy.rotate(Four_Corners[key])
             self.enemies.append(new_enemy)
             break
@@ -267,16 +245,24 @@ class EnemyManager:
         return bullets
 
     def move(self, player):
-        for i, enemy in enumerate(self.enemies):
+        for enemy in self.enemies:
             rotate = random.randint(0, 3) == 0
             if rotate:
                 angel = random.choice(list(ANGLES.keys()))
-                if angel != enemy.d:
-                    enemy.move(angel)
+                enemy.move(angel)
 
-            others = self.enemies[:]
-            others[i] = player
-            enemy.move(enemy.d, *others)
+            moved = enemy.move(enemy.d)
+            if not moved:
+                continue
+
+            if pygame.sprite.groupcollide(enemy, player, False, False):
+                enemy.back()
+                continue
+
+            for other in self.enemies:
+                if other != enemy and pygame.sprite.groupcollide(enemy, other, False, False):
+                    enemy.back()
+                    break
 
     def draw(self, win):
         for enemy in self.enemies:
@@ -295,21 +281,7 @@ BULLETS = {
 }
 
 
-def show_progress(tc, tank, emg):
-    print("="*15, "time: %s" % tc)
-    print("player tank:", tank)
-    for i, enemy in enumerate(emg.enemies):
-        print("enemy %s: %s" % (i, enemy))
-
 count = 0
-score = 0
-lives = 3
-running = False
-
-start_info = FONTS[2].render("Press Any key to start game", True, COLORS["over"])
-text_rect = start_info.get_rect(center=(WIN_WIDTH / 2, WIN_HEIGHT / 2))
-win.blit(start_info, text_rect)
-
 while True:
     # 获取所有事件
     for event in pygame.event.get():
@@ -318,80 +290,37 @@ while True:
             pygame.quit()  # 关闭窗口
             sys.exit()  # 停止程序
 
-        if running:
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_LEFT or event.key == ord('a'):
-                    tank.move("LEFT", *emg.enemies)
-                if event.key == pygame.K_RIGHT or event.key == ord('d'):
-                    tank.move("RIGHT", *emg.enemies)
-                if event.key == pygame.K_UP or event.key == ord('w'):
-                    tank.move("UP", *emg.enemies)
-                if event.key == pygame.K_DOWN or event.key == ord('s'):
-                    tank.move("DOWN", *emg.enemies)
-        else:
-            if event.type == pygame.KEYDOWN:
-                running = True
-                score = 0
-                lives = 3
-                tank = Tank(bottom_center_c, bottom_center_r, "player")
-                emg = EnemyManager()
-                BULLETS = {
-                    "player": BulletManager(),
-                    "enemy": BulletManager()
-                }
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_LEFT or event.key == ord('a'):
+                tank.move("LEFT")
+            if event.key == pygame.K_RIGHT or event.key == ord('d'):
+                tank.move("RIGHT")
+            if event.key == pygame.K_UP or event.key == ord('w'):
+                tank.move("UP")
+            if event.key == pygame.K_DOWN or event.key == ord('s'):
+                tank.move("DOWN")
 
-    if running:
-        win.fill(COLORS["bg"])
+    win.fill(COLORS["bg"])
 
-        if count % FPS == 0:  # 每秒生成一次子弹
-            bullet = tank.shoot()
-            BULLETS["player"].add(bullet)
-            BULLETS["enemy"].add(*emg.shoot())
+    if count % FPS == 0:  # 每秒生成一次子弹
+        bullet = tank.shoot()
+        BULLETS["player"].add(bullet)
+        BULLETS["enemy"].add(*emg.shoot())
 
-            if count % ( FPS * GENERATE_SPACE ) == 0:
-                emg.generate_enemy(tank)
 
-        if count % (FPS // BULLET_SPEED) == 0:
-            BULLETS["player"].move()
-            BULLETS["enemy"].move()
-            emg.move(tank)
+        if count % ( FPS * BULLET_SPEED ) == 0:
+            emg.generate_enemy(tank)
 
-        # bullet collide handle
-        to_delete = []
-        for enemy in emg.enemies:
-            if pygame.sprite.groupcollide(BULLETS["player"], enemy, True, False):
-                to_delete.append(enemy)
-                score += 1
+    if count % (FPS // BULLET_SPEED) == 0:
+        BULLETS["player"].move()
+        BULLETS["enemy"].move()
+        emg.move(tank)
 
-        for td in to_delete:
-            emg.enemies.remove(td)
+    tank.draw(win)
 
-        pygame.sprite.groupcollide(BULLETS["player"], BULLETS["enemy"], True, True)
-
-        if pygame.sprite.groupcollide(BULLETS["enemy"], tank, True, False):
-            lives -= 1
-
-        if lives <= 0:
-            running = False
-            texts = ["Game Over", "Scores: %d" % (score), "Press Any key to Restart game"]
-            for ti, text in enumerate(texts):
-                over_info = FONTS[ti].render(text, True, COLORS["over"])
-                text_rect = over_info.get_rect(center=(WIN_WIDTH / 2, WIN_HEIGHT / 2 + 48 * ti))
-                win.blit(over_info, text_rect)
-
-        tank.draw(win)
-
-        BULLETS["player"].draw(win)
-        BULLETS["enemy"].draw(win)
-        emg.draw(win)
-
-        # if count % FPS == 0:
-        #     show_progress(count % FPS, tank, emg)
-
-        text_info = FONTS[2].render("Scores: %d" % score, True, COLORS["score"])
-        win.blit(text_info, dest=(0, 0))
-        text_info = FONTS[2].render("Lives: %d" % lives, True, COLORS["score"])
-        win.blit(text_info, dest=(0, 24))
+    BULLETS["player"].draw(win)
+    BULLETS["enemy"].draw(win)
+    emg.draw(win)
 
     clock.tick(FPS)  # 控制循环刷新频率,每秒刷新FPS对应的值的次数
     count += 1
